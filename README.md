@@ -69,9 +69,3 @@ streamlit run app.py
   "images": []
 }
 ```
-
----
-
-## ⚖️ Disclaimer
-
-This tool provides decision support for qualified investigating officers and legal reviewers. It does not replace judicial discretion, statutory verification, or official legal counsel.
