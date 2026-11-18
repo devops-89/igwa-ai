@@ -57,7 +57,6 @@ streamlit run app.py
 | `POST` | `/api/chat` | Send case facts, queries, and images (with session tracking) |
 | `GET` | `/api/sessions` | List all saved chat sessions |
 | `GET` | `/api/sessions/{id}` | Retrieve history for a specific session |
-| `DELETE` | `/api/sessions/{id}` | Delete a saved session |
 | `GET` | `/docs` | Interactive Swagger API documentation |
 
 ### Example OCR Ingestion (`POST /documents/ingest`)
