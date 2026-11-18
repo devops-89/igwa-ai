@@ -1,7 +1,4 @@
-# IGWA Legal Chatbot (विवेचना एवं केस डायरी प्रणाली)
-
-An AI-powered legal investigation and case diary assistant for Indian law enforcement, supporting **BNS 2023**, **BNSS 2023**, and **BSB 2023**. Built with **FastAPI**, **Streamlit**, local **FAISS** vector search, and **Gemini API** (with Groq fallback).
-
+# IGWA Legal Chatbot (विवेचना प्रणाली)
 ---
 
 ## ⚡ Quick Start
