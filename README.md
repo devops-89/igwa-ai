@@ -45,6 +45,7 @@ streamlit run app.py
 
 - **Web UI:** `http://localhost:8501`
 - **Swagger Docs:** `http://127.0.0.1:8000/docs`
+- **ngrok URL:** 'https://rebirth-equator-esophagus.ngrok-free.dev/docs'
 
 ---
 
