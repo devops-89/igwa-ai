@@ -21,6 +21,7 @@ storage/
 *.log
 query_log.txt
 test.txt
+sessions/
 .streamlit/secrets.toml
 .vscode/
 .idea/

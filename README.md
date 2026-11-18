@@ -56,10 +56,37 @@ streamlit run app.py
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Service health & index status |
-| `POST` | `/api/chat` | Send case facts, queries, and images |
+| `POST` | `/documents/ingest` | Ingest raw or structured OCR JSON into vector index |
+| `POST` | `/api/chat` | Send case facts, queries, and images (with session tracking) |
+| `GET` | `/api/sessions` | List all saved chat sessions |
+| `GET` | `/api/sessions/{id}` | Retrieve history for a specific session |
+| `DELETE` | `/api/sessions/{id}` | Delete a saved session |
 | `GET` | `/docs` | Interactive Swagger API documentation |
 
-### Example Request (`POST /api/chat`)
+### Example OCR Ingestion (`POST /documents/ingest`)
+
+```json
+{
+  "document_name": "FIR_Case_12_2026.json",
+  "document_id": "FIR-12/2026",
+  "pages": [
+    {
+      "page_number": 1,
+      "text": "थाना सिविल लाइंस प्रथम सूचना रिपोर्ट संख्या 12/2026 दिनांक 18.11.2026..."
+    },
+    {
+      "page_number": 2,
+      "text": "घटनास्थल से साक्ष्य एवं जब्ती सूची विवरण..."
+    }
+  ],
+  "metadata": {
+    "police_station": "Civil Lines",
+    "district": "Jaipur"
+  }
+}
+```
+
+### Example Chat Request (`POST /api/chat`)
 
 ```json
 {

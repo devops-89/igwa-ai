@@ -1,6 +1,8 @@
 import base64
+import datetime
 import hashlib
 import io
+import json
 import logging
 import mimetypes
 import os
@@ -270,6 +272,8 @@ def extract_docx_text(file_bytes: bytes) -> str:
 
 
 # ── Session State Bootstrap ───────────────────────────────────────────────────
+if "session_id" not in st.session_state:
+    st.session_state.session_id = f"case_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "case_facts" not in st.session_state:
@@ -282,6 +286,37 @@ if "image_attachments" not in st.session_state:
     st.session_state.image_attachments = []
 if "document_errors" not in st.session_state:
     st.session_state.document_errors = []
+
+
+def format_chat_as_markdown(session_id: str, case_facts: str | None, messages: list) -> str:
+    """Formats current session and messages into a clean Case Diary Markdown document."""
+    lines = [
+        "# पुलिस विवेचना एवं केस डायरी अभिलेख (Investigation & Case Diary Record)",
+        f"**सत्र पहचान (Session ID):** `{session_id}`",
+        f"**निर्यात दिनांक (Export Date):** {datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}",
+        "",
+        "---",
+        "",
+    ]
+    if case_facts:
+        lines.extend([
+            "## 📋 प्रारंभिक घटना विवरण / केस तथ्य (Case Facts)",
+            case_facts.strip(),
+            "",
+            "---",
+            "",
+        ])
+    lines.append("## 💬 विवेचना संवाद एवं विधिक विश्लेषण (Case Analysis History)\n")
+    for msg in messages:
+        role = "अन्वेषण अधिकारी (IO)" if msg.get("role") == "user" else "विधिक सहायक AI (Legal AI Assistant)"
+        lines.append(f"### 🔹 {role}:")
+        lines.append(msg.get("content", "").strip())
+        if msg.get("sources"):
+            lines.append("\n**संदर्शित विधिक संदर्भ दस्तावेज:**")
+            for src in msg["sources"]:
+                lines.append(f"- `[{src.get('idx')}]` {src.get('file')}: {src.get('snippet', '')}")
+        lines.append("\n" + "-" * 40 + "\n")
+    return "\n".join(lines)
 
 
 def expand_scenario_for_law_query(user_input: str) -> str:
@@ -379,6 +414,74 @@ with st.sidebar:
         st.warning("Chat API is offline. Start it with `python -m uvicorn api:app --port 8000`.")
     st.divider()
 
+    st.markdown("### 🗂️ सत्र एवं चैट इतिहास (Session & History)")
+    st.markdown(f"**सत्र ID:** `{st.session_state.session_id}`")
+
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        if st.button("➕ नया सत्र (New)", use_container_width=True, help="नया केस सत्र शुरू करें"):
+            st.session_state.session_id = f"case_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            st.session_state.messages = []
+            st.session_state.case_facts = None
+            st.session_state.document_text = ""
+            st.session_state.image_attachments = []
+            st.rerun()
+
+    with col_s2:
+        if st.button("🗑️ साफ़ करें (Clear)", use_container_width=True, help="वर्तमान चैट साफ़ करें"):
+            st.session_state.messages = []
+            st.session_state.case_facts = None
+            st.rerun()
+
+    # Chat Export Download
+    if st.session_state.messages:
+        md_content = format_chat_as_markdown(
+            st.session_state.session_id,
+            st.session_state.case_facts,
+            st.session_state.messages,
+        )
+        st.download_button(
+            label="💾 केस डायरी निर्यात (.md)",
+            data=md_content,
+            file_name=f"{st.session_state.session_id}_case_diary.md",
+            mime="text/markdown",
+            use_container_width=True,
+            help="इस विवेचना सत्र की केस डायरी व चैट को Markdown प्रारूप में डाउनलोड करें",
+        )
+
+    # Saved Sessions Browser
+    try:
+        saved_sessions_res = requests.get(f"{api_url}/api/sessions", timeout=2)
+        if saved_sessions_res.status_code == 200:
+            saved_list = saved_sessions_res.json().get("sessions", [])
+            if saved_list:
+                with st.expander(f"📜 पूर्व सहेजे गए सत्र ({len(saved_list)})", expanded=False):
+                    session_options = {
+                        f"{s['session_id']} ({s.get('message_count', 0)} संदेश) - {s.get('title', '')[:20]}": s["session_id"]
+                        for s in saved_list
+                    }
+                    selected_label = st.selectbox(
+                        "सत्र चुनें",
+                        options=list(session_options.keys()),
+                        label_visibility="collapsed",
+                    )
+                    if st.button("📂 चयनित सत्र लोड करें (Load)", use_container_width=True):
+                        target_id = session_options[selected_label]
+                        load_res = requests.get(f"{api_url}/api/sessions/{target_id}", timeout=3)
+                        if load_res.status_code == 200:
+                            loaded_data = load_res.json()
+                            st.session_state.session_id = loaded_data.get("session_id", target_id)
+                            st.session_state.case_facts = loaded_data.get("case_facts")
+                            st.session_state.messages = loaded_data.get("messages", [])
+                            st.success(f"सत्र `{target_id}` लोड किया गया!")
+                            st.rerun()
+                        else:
+                            st.error("सत्र लोड करने में विफलता।")
+    except requests.RequestException:
+        pass
+
+    st.divider()
+
     st.markdown("### 🛡️ सुरक्षा दायरा (Guardrail)")
     st.caption(
         "यह प्रणाली केवल आपराधिक मामलों, पुलिस विवेचना प्रक्रिया, साक्ष्य संकलन तथा "
@@ -386,17 +489,6 @@ with st.sidebar:
     )
     st.divider()
 
-    if st.button("🔄 नया मामला दर्ज करें (New Case)", use_container_width=True, help="नया आपराधिक मामला दर्ज कर उसका विश्लेषण करें"):
-        st.session_state.messages = []
-        st.session_state.case_facts = None
-        st.rerun()
-
-    if st.button("🗑️ चैट इतिहास साफ़ करें (Clear Chat)", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.case_facts = None
-        st.rerun()
-
-    st.divider()
     st.markdown("### 📋 ऑडिट लॉग")
     if st.button("📂 हालिया लॉग देखें (View Logs)", use_container_width=True):
         try:
@@ -564,6 +656,7 @@ if query:
         with st.spinner(spinner_text):
             try:
                 payload = {
+                    "session_id": st.session_state.session_id,
                     "query": query,
                     "case_facts": st.session_state.case_facts,
                     "document_text": st.session_state.document_text or None,
@@ -575,14 +668,19 @@ if query:
                         }
                         for image in st.session_state.image_attachments
                     ],
+                    "chat_history": [
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages[-6:]
+                    ],
                 }
                 response = requests.post(
                     f"{api_url}/api/chat",
                     json=payload,
-                    timeout=(5, 240),
+                    timeout=(15, 240),
                 )
                 response.raise_for_status()
                 result = response.json()
+                st.session_state.session_id = result.get("session_id", st.session_state.session_id)
                 st.session_state.case_facts = result.get("case_facts")
                 st.session_state.messages.append(
                     {
@@ -599,14 +697,21 @@ if query:
                     try:
                         detail = exc.response.json().get("detail", "")
                     except ValueError:
-                        detail = ""
-                error_message = detail or (
-                    "Chat API से संपर्क नहीं हो सका। API सर्वर चालू करें और CHAT_API_URL जाँचें।"
-                )
+                        detail = exc.response.text
+                if not detail:
+                    if isinstance(exc, requests.exceptions.ConnectTimeout):
+                        detail = "API सर्वर से जुड़ने में समय अधिक लगा (Connection Timeout)। सर्वर व्यस्त हो सकता है, कृपया पुनः प्रयास करें।"
+                    elif isinstance(exc, requests.exceptions.ConnectionError):
+                        detail = f"Chat API ({api_url}) से संपर्क नहीं हो सका। कृपया सुनिश्चित करें कि Uvicorn सर्वर चालू है (`python -m uvicorn api:app --port 8000`)।"
+                    elif isinstance(exc, requests.exceptions.ReadTimeout):
+                        detail = "विधिक विश्लेषण में समय सीमा समाप्त हुई (Read Timeout)। कृपया पुनः प्रयास करें।"
+                    else:
+                        detail = f"सर्वर से संपर्क विफल: {exc}"
+
                 st.session_state.messages.append(
                     {
                         "role": "assistant",
-                        "content": f"❌ {error_message}",
+                        "content": f"❌ {detail}",
                         "sources": [],
                         "warn": False,
                         "guardrail": False,
