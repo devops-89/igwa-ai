@@ -6,10 +6,9 @@ import re
 from typing import Any
 
 import fitz
+
 from groq import AsyncGroq
-
 from pydantic import ValidationError
-
 from config.settings import get_settings
 from services.ocr.gemini_client import METADATA_PROMPT, describe_provider_error
 from services.ocr.schemas import OCRMetadata
@@ -123,14 +122,31 @@ class GroqMetadataError(Exception):
     """Raised when Groq metadata extraction fails or returns unusable output."""
 
 _METADATA_TIMEOUT_SECONDS = 60.0
+
 _METADATA_JSON_SHAPE = """Return ONLY one JSON object with exactly these keys:
-{"document_type": string|null, "fir_number": string|null, "case_number": string|null,
-"document_date": string|null, "police_station": string|null, "district": string|null,
-"investigating_officer": string|null, "legal_sections": [string],
-"complainant_name": string|null, "accused_names": [string], "witness_names": [string],
-"incident_date_time": string|null, "incident_location": string|null,
-"document_narrative": string|null, "investigation_actions_findings": [string]}
-Use null for missing single values and [] for missing lists. No commentary."""
+{
+"document_type": string|null,
+"title": string|null,
+"fir_number": string|null,
+"fir_date": string|null,
+"case_number": string|null,
+"case_type": string|null,
+"document_date": string|null,
+"police_station": string|null,
+"district": string|null,
+"investigating_officer": string|null,
+"legal_sections": [string],
+"complainant_name": string|null,
+"accused_names": [string],
+"witness_names": [string],
+"incident_date": string|null,
+"incident_date_time": string|null,
+"incident_location": string|null,
+"document_narrative": string|null,
+"investigation_actions_findings": [string]
+}
+Use null for missing single values and [] for missing lists.
+No commentary."""
 
 def _parse_metadata_json(text: str | None) -> dict[str, Any]:
     if not text or not text.strip():
@@ -152,7 +168,7 @@ def _parse_metadata_json(text: str | None) -> dict[str, Any]:
     return parsed
 
 async def extract_metadata(ocr_text: str) -> OCRMetadata:
-    """Extract the 15 metadata fields from existing OCR text (text-only, single attempt)."""
+    """Extract FIR and police document metadata from existing OCR text."""
     if not ocr_text or not ocr_text.strip():
         raise GroqMetadataError("No OCR text available for metadata extraction")
     settings = get_settings()

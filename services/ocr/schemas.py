@@ -22,29 +22,39 @@ class MetadataStatus(str, Enum):
     SKIPPED = "skipped"
 
 class OCRMetadata(BaseModel):
-    """The 15 metadata fields extracted from OCR text of police documents."""
+    """Metadata extracted from FIR and police documents."""
 
+    # FIR details
     document_type: str | None = None
     fir_number: str | None = None
-    case_number: str | None = None
-    document_date: str | None = None
     police_station: str | None = None
     district: str | None = None
-    investigating_officer: str | None = None
+    case_number: str | None = None
+    fir_date: str | None = None
+    case_type: str | None = None
 
-    legal_sections: list[str] = Field(default_factory=list)
-
-    complainant_name: str | None = None
-
-    accused_names: list[str] = Field(default_factory=list)
-    witness_names: list[str] = Field(default_factory=list)
-
+    # Incident details
+    incident_date: str | None = None
     incident_date_time: str | None = None
     incident_location: str | None = None
 
-    document_narrative: str | None = None
+    # People involved
+    complainant_name: str | None = None
+    accused_names: list[str] = Field(default_factory=list)
+    witness_names: list[str] = Field(default_factory=list)
 
-    investigation_actions_findings: list[str] = Field(default_factory=list)
+    # Legal details
+    legal_sections: list[str] = Field(default_factory=list)
+
+    # Investigation details
+    investigating_officer: str | None = None
+    document_narrative: str | None = None
+    investigation_actions_findings: list[str] = Field(
+        default_factory=list
+    )
+
+    # Case diary details
+    title: str | None = None
 
 class OCRUploadResponse(BaseModel):
     success: bool = True
