@@ -20,60 +20,60 @@ from response_format import structure_response
 
 
 def expand_scenario_for_law_query(user_input: str) -> str:
-    """Rewrite natural-language scenario to push retrieval toward exact legal terms, definitions, and punishments across all Indian Penal Laws (BNS 2023 & IPC)."""
+    """Rewrite natural-language scenario to push retrieval toward exact legal terms, definitions, and punishments across BNS 2023, BNSS 2023, and BSB 2023."""
     text = user_input.lower()
     expansions = []
 
     patterns = {
         # Missing persons, kidnapping and abduction
         "missing|failed to return|gone missing|disappeared|not return|vanished|whereabouts unknown|kidnap|abduct|गुमशुदा|लापता|लौटकर नहीं आया|लौटकर नहीं आई|अपहरण|व्यपहरण|बहला-फुसलाकर ले जाना|अपने साथ ले गया|अपने साथ ले गई|स्कूल के बाहर से ले गया|स्कूल के बाहर से ले गई": [
-            "missing person missing child kidnapping abduction wrongful confinement trafficking BNS 137 138 140 143 IPC 359 361 362 363 365 368 BNSS missing person report FIR search procedure",
+            "missing person missing child kidnapping abduction wrongful confinement trafficking BNS 137 138 140 143 BNSS missing person report FIR search procedure",
         ],
         # Cyber offences and communications misuse
         "cyber|social media|online account|message|profile|whatsapp|email|it act|digital evidence|cyberbullying|online threat|साइबर|साइबर अपराध|सोशल मीडिया|ऑनलाइन खाता|संदेश|धमकी|इंटरनेट पर|फर्जी प्रोफाइल|व्हाट्सऐप|ईमेल": [
             "cyber crime information technology act identity theft cheating by personation privacy violation obscene electronic material stalking criminal intimidation BNS 77 78 79 318 319 351 IT Act 66 66C 66D 66E 67 electronic evidence",
         ],
-        # Bank and payment fraud; hints support investigation, not an assumed offence
+        # Bank and payment fraud
         "bank|unauthorized transaction|unauthorised transaction|bank account|account debit|withdrawn|withdrawal|upi|atm|debit card|credit card|net banking|phishing|otp|बैंक|बैंक खाता|खाते से राशि|अनधिकृत लेनदेन|अनधिकृत निकासी|राशि निकाली|रुपये निकाले|खाता डेबिट|यूपीआई|एटीएम|ओटीपी|फिशिंग|धोखाधड़ी": [
             "bank unauthorized transaction UPI ATM card net banking phishing OTP identity theft cheating electronic record IT Act 66C 66D BNS 318 319 beneficiary account transaction reference authentication consent bank records",
         ],
         # Trespass, house-breaking and civil possession disputes
         "illegal occupation|occupy|occupied|entered house|entered the house|entered the home|unauthorized entry|trespass|recovery of property|possession|dispossession|burglary|break-in|attempted burglary|housebreaking|locked office|कब्जा|अवैध कब्जा|जमीन|भूमि|सीमा विवाद|जमीन की सीमा|भूखंड|निर्माण कार्य|घर में प्रवेश|घर में घुस|मकान में प्रवेश|मकान में घुस|अनधिकृत प्रवेश|अतिचार|गृह-अतिचार|संपत्ति से बेदखल": [
-            "criminal trespass house trespass house breaking lurking house trespass BNS 329 330 331 332 333 IPC 441 442 445 448 452 453 Specific Relief Act sections 5 6 possession wrongful dispossession civil remedy boundary dispute",
+            "criminal trespass house trespass house breaking lurking house trespass BNS 329 330 331 332 333 Specific Relief Act sections 5 6 possession wrongful dispossession civil remedy boundary dispute",
         ],
         # Property theft, robbery, extortion and breach of trust
         "stolen|theft|vehicle stolen|goods stolen|steal|snatching|robbery|dacoity|extortion|valuables|cash and jewellery|cash and jewelry|cash and mobile|cbt|breach of trust|चोरी|चुराया|चुरा लिया|लूट|लूटपाट|डकैती|छीनना|छीनने का प्रयास|छीनने की कोशिश|झपटमारी|सामान लेकर फरार|पैसे और मोबाइल|मोबाइल फोन छीन|नकदी और आभूषण|नकदी तथा आभूषण|आभूषण लिए|उद्यापन|जबरन वसूली|गबन|न्यासभंग|वाहन चोरी|नकदी लेकर": [
-            "theft snatching extortion robbery dacoity criminal misappropriation criminal breach of trust receiving stolen property BNS 303 304 308 309 310 314 316 317 IPC 378 379 383 390 391 392 395 405 406 411 definitions punishment classification",
+            "theft snatching extortion robbery dacoity criminal misappropriation criminal breach of trust receiving stolen property BNS 303 304 308 309 310 314 316 317 definitions punishment classification",
         ],
         # Threats and demands for property
         "criminal intimidation|intimidation|threatened|threatening|threat|धमकी|धमकाया|धमकी दी|धमकाकर|डराया": [
-            "criminal intimidation threat to person reputation property intent to cause alarm compel act BNS section 351 IPC 503 506 evidence call records messages",
+            "criminal intimidation threat to person reputation property intent to cause alarm compel act BNS section 351 evidence call records messages",
         ],
         "demanded money|demand for money|demand for payment|ransom|money demand|पैसे की मांग|रुपये की मांग|रुपए की मांग|धन की मांग|लाख की मांग|पैसे नहीं देने पर|फिरौती|जबरन वसूली|उद्यापन": [
-            "extortion putting a person in fear of injury to deliver property BNS section 308 IPC 383 384 criminal intimidation BNS 351 threat evidence payment demand",
+            "extortion putting a person in fear of injury to deliver property BNS section 308 criminal intimidation BNS 351 threat evidence payment demand",
         ],
         "wrongful restraint|रास्ता रोक|आगे जाने नहीं दिया|जाने से रोक": [
-            "wrongful restraint BNS section 126 IPC 339 341 voluntarily obstructing a person from proceeding in a direction evidence movement liberty",
+            "wrongful restraint BNS section 126 voluntarily obstructing a person from proceeding in a direction evidence movement liberty",
         ],
         # Assault, hurt and group liability
         "assault|beaten|hit|struck|attacked|injured|struggle|hurt|grievous hurt|public servant|मारपीट|मारपीट की|पीटा|पिटाई|हमला|हमला किया|चोट|घायल|घायल हुए|कहासुनी|झगड़ा|लड़ाई|हाथापाई|उपहति|घोर उपहति|धक्का|थप्पड़": [
-            "voluntarily causing hurt grievous hurt criminal force assault BNS 115 116 117 118 121 131 132 IPC 319 320 321 323 325 351 common intention BNS 3(5) IPC 34 medical evidence cross complaint",
+            "voluntarily causing hurt grievous hurt criminal force assault BNS 115 116 117 118 121 131 132 common intention BNS 3(5) medical evidence cross complaint",
         ],
         # Cheating, forgery and impersonation
         "fraud|cheating|forged cheque|online scam|fake identity|loan|forgery|false document|impersonation|documents were used|used the documents|checkbook|check book|धोखाधड़ी|छल|ठगी|जालसाजी|कूटरचना|फर्जी दस्तावेज|जाली दस्तावेज|दस्तावेज नकली|दस्तावेज़ नकली|नकली थे|दस्तावेजों का इस्तेमाल|दस्तावेजों का उपयोग|दस्तावेजों का दुरुपयोग|दस्तावेज का इस्तेमाल|दस्तावेज का उपयोग|दस्तावेज का दुरुपयोग|चेकबुक|फर्जी पहचान|प्रतिरूपण|नकली चेक|ऋण": [
-            "cheating fraud cheating by personation forgery false document use forged document criminal conspiracy BNS 61 318 319 335 336 337 338 340 IPC 120B 415 416 420 463 465 468 471 documentary electronic evidence",
+            "cheating fraud cheating by personation forgery false document use forged document criminal conspiracy BNS 61 318 319 335 336 337 338 340 documentary electronic evidence",
         ],
-        # Death, homicide and attempts (do not confuse completed death with attempt)
+        # Death, homicide and attempts
         "murder|dead|death|killed|assassinated|homicide|body found|attempt to murder|मृत|मृत्यु|मौत|हत्या|हत्या का प्रयास|जान से मार|खून|शव|मृत पाया|मृत पाई": [
-            "murder culpable homicide causing death attempt to murder BNS 100 101 103 105 109 IPC 299 300 302 304 307 postmortem forensic evidence death investigation",
+            "murder culpable homicide causing death attempt to murder BNS 100 101 103 105 109 postmortem forensic evidence death investigation",
         ],
         # Damage, arson and mischief
         "mischief|damage to property|destruction|crops|vandalism|fire|explosion|तोड़फोड़|संपत्ति को नुकसान|नुकसान पहुंचाया|फसल नष्ट|आग लगाई|आग लग गई|जानबूझकर आग|आग के जानबूझकर लगाए|आग लगाए जाने|आगजनी|विस्फोट|नुकसान किया": [
-            "mischief property damage destruction arson crop damage BNS 324 326 IPC 425 427 435 436 fire explosion valuation evidence",
+            "mischief property damage destruction arson crop damage BNS 324 326 fire explosion valuation evidence",
         ],
         # Weapons and explosives
         "firearm|arms|illegal weapons|gun|pistol|revolver|ammunition|explosive|हथियार|अवैध हथियार|बंदूक|पिस्तौल|रिवॉल्वर|गोली|कारतूस|आग्नेयास्त्र|विस्फोटक": [
-            "Arms Act illegal possession firearm ammunition use weapon BNS section 25 27 Arms Act explosive substances act seizure ballistic evidence licence",
+            "Arms Act illegal possession firearm ammunition use weapon BNS 25 27 Arms Act explosive substances act seizure ballistic evidence licence",
         ],
         # Narcotics and prohibited substances
         "narcotic|drug|ganja|cocaine|heroin|opium|contraband|prohibited substance|नशीला पदार्थ|मादक पदार्थ|नारकोटिक्स|गांजा|चरस|कोकीन|हेरोइन|अफीम|प्रतिबंधित पदार्थ|मादक द्रव्य": [
@@ -81,11 +81,11 @@ def expand_scenario_for_law_query(user_input: str) -> str:
         ],
         # Conspiracy, abetment and joint participation
         "conspiracy|accomplice|pre-planned|joint liability|abetment|षड्यंत्र|साजिश|आपराधिक षड्यंत्र|दुष्प्रेरण|सह-अभियुक्त|साझा आशय|समान आशय|सामान्य आशय|सामान्य उद्देश्य|साथियों के साथ|दो साथियों|साथ मिलकर|तीनों आरोपी|तीनों ने|मिलकर अपराध": [
-            "criminal conspiracy common intention common object abetment BNS 3(5) 45 46 61 189 190 IPC 34 107 109 120B evidence agreement participation",
+            "criminal conspiracy common intention common object abetment BNS 3(5) 45 46 61 189 190 evidence agreement participation",
         ],
         # Offences against women
         "rape|sexual assault|outrage modesty|stalking|voyeurism|dowry death|dowry harassment|domestic violence|cruelty to woman|acid attack|molest|molestation|eve teasing|बलात्कार|दुष्कर्म|यौन हमला|लैंगिक हमला|छेड़छाड़|यौन उत्पीड़न|पीछा करना|पीछा कर रहा|पीछा करता|पीछा किया|घूरना|दहेज उत्पीड़न|दहेज मृत्यु|घरेलू हिंसा|महिला के साथ क्रूरता|तेजाब हमला": [
-            "BNS offences against women rape sexual assault sexual harassment voyeurism stalking dowry death cruelty husband acid attack 63 64 65 74 75 77 78 79 80 85 86 124 IPC 304B 326A 354 354A 354C 354D 375 376 498A POCSO Dowry Prohibition Act",
+            "BNS offences against women rape sexual assault sexual harassment voyeurism stalking dowry death cruelty husband acid attack BNS 63 64 65 74 75 77 78 79 80 85 86 124 POCSO Dowry Prohibition Act",
         ],
         # Child protection and child labour/trafficking
         "pocso|child sexual assault|child abuse|minor girl|minor boy|child kidnapping|child trafficking|child abandonment|child labor|minor child|children|पॉक्सो|बाल यौन शोषण|बच्चे का अपहरण|नाबालिग|नाबालिग लड़की|नाबालिग लड़का|बाल तस्करी|बाल श्रम|बाल विवाह|बालक": [
@@ -93,15 +93,15 @@ def expand_scenario_for_law_query(user_input: str) -> str:
         ],
         # Public order, rioting and unlawful assembly
         "riot|rioting|unlawful assembly|affray|public order|mob|violent protest|दंगा|उपद्रव|अवैध जमाव|गैरकानूनी जमाव|भीड़ ने हमला|सार्वजनिक शांति|झड़प|सामूहिक हिंसा": [
-            "unlawful assembly rioting affray public tranquillity common object BNS 189 190 191 194 IPC 141 146 147 148 149 public order evidence",
+            "unlawful assembly rioting affray public tranquillity common object BNS 189 190 191 194 public order evidence",
         ],
         # Obstruction, disobedience and public-servant offences
         "obstruct|obstruction|resist|disobey|public servant|government officer|सरकारी काम में बाधा|पुलिस से हाथापाई|लोक सेवक|सरकारी कर्मचारी|आदेश का उल्लंघन": [
-            "obstructing public servant disobedience lawful order assault public servant BNS 132 221 223 IPC 186 188 353 lawful duty evidence",
+            "obstructing public servant disobedience lawful order assault public servant BNS 132 221 223 lawful duty evidence",
         ],
         # False evidence, destruction of evidence and investigation obstruction
         "false evidence|perjury|fabricated evidence|destroy evidence|tamper evidence|conceal evidence|झूठी गवाही|मिथ्या साक्ष्य|साक्ष्य मिटाना|सबूत मिटाना|साक्ष्य से छेड़छाड़|दस्तावेज नष्ट|गवाह को धमकी": [
-            "false evidence fabricating false evidence destruction of evidence screening offender threatening witness BNS 227 228 238 232 IPC 191 192 201 195A electronic documentary evidence",
+            "false evidence fabricating false evidence destruction of evidence screening offender threatening witness BNS 227 228 238 232 electronic documentary evidence",
         ],
         # Motor-vehicle and road incidents
         "road accident|motor accident|traffic accident|hit and run|drunk driving|rash driving|negligent driving|सड़क दुर्घटना|वाहन दुर्घटना|हिट एंड रन|टक्कर|लापरवाही से वाहन|तेज रफ्तार|नशे में गाड़ी|सड़क हादसा": [
@@ -129,7 +129,7 @@ def expand_scenario_for_law_query(user_input: str) -> str:
     return " ".join(dict.fromkeys(expansions))
 
 
-def create_query_engines(index, similarity_top_k=6,top_p = 0.8 ,response_mode="compact"):
+def create_query_engines(index, similarity_top_k=5,top_p = 0.8 ,response_mode="compact"):
     """Create query engines with specified retrieval parameters for different languages"""
     
     _BASE = (
@@ -186,13 +186,16 @@ def print_sources(response, max_chars=150):
         print(f"      {snippet}...")
 
 
-def log_interaction(query, response, log_path="query_log.txt"):
+def log_interaction(query, response, log_path=None):
     """Append query/response/sources to a plain-text audit log.
 
     NOTE: if this system handles sensitive case data, treat this log file's
     access and retention the same as any other case file, not as a throwaway
     debug log.
     """
+    if log_path is None:
+        import os
+        log_path = "logs/query_log.txt" if os.path.isdir("logs") else "query_log.txt"
     try:
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(f"\n[{datetime.datetime.now().isoformat()}]\n")

@@ -19,7 +19,9 @@ storage/
 *.pkl
 
 *.log
+logs/
 query_log.txt
+query_log.jsonl
 test.txt
 sessions/
 .streamlit/secrets.toml
