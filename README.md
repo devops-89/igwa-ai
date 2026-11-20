@@ -85,21 +85,12 @@ streamlit run app.py
 
 | Method | Endpoint | Description |
 |---|---|---|
-<<<<<<< HEAD
 | `GET` | `/health` | Service health & index status |
 | `POST` | `/documents/ingest` | Ingest raw or structured OCR JSON into vector index |
 | `POST` | `/api/chat` | Send case facts, queries, and images (with session tracking) |
 | `GET` | `/api/sessions` | List all saved chat sessions |
 | `GET` | `/api/sessions/{id}` | Retrieve history for a specific session |
 | `GET` | `/docs` | Interactive Swagger API documentation |
-=======
-| `GET` | `/health` | Health check and RAG initialization status |
-| `POST` | `/api/v1/chat` | Persistent chat; accepts case questions and optional OCR/context text |
-| `POST` | `/api/chat` | Persistent chat; creates a session ID and continues saved conversations |
-| `GET` | `/api/sessions` | List sessions created through the legacy chat route |
-| `GET` | `/api/sessions/{id}` | Retrieve a saved session |
-| `GET` | `/docs` | Interactive OpenAPI/Swagger documentation |
->>>>>>> 8b9ac16 (Add chatbot API, backend and tests)
 
 `/api/v1/chat` creates a system-generated session ID when `session_id` is omitted and restores the saved conversation when the returned ID is sent on a follow-up request. Do not invent an ID. OCR data is supplied as context to a chat request; there is no OCR document-ingestion endpoint. When `CHATBOT_API_KEY` is configured, send it as the `X-API-Key` header to all endpoints except `/health`. API responses include an `X-Request-ID` header; structured errors include the same ID in the response body.
 
@@ -135,21 +126,3 @@ The response includes a system-generated `session_id`. For the next query, send 
   "query": "अब कौन से साक्ष्य एकत्र करने चाहिए?"
 }
 ```
-
-### Asking About OCR Context (`POST /api/v1/chat`)
-
-```json
-{
-  "query": "इस OCR विवरण के आधार पर अब पुलिस को क्या कदम उठाने चाहिए?",
-  "ocr_data": {
-    "pages": [
-      {
-        "page_number": 1,
-        "text": "एक महिला ने आरोपी द्वारा पीछा किए जाने और धमकी दिए जाने की शिकायत की।"
-      }
-    ]
-  }
-}
-```
-
-Without OCR, put the case description and question together in `query`. With OCR, put the question in `query` and the recognized text in `ocr_data` or `document_text`. The API does not accept image files or index uploaded OCR documents.
