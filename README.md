@@ -30,9 +30,6 @@ An AI-powered legal investigation and case diary assistant designed exclusively 
 - `rag.py` — RAG pipeline, Gemini client failover, First Schedule lookup, and system prompt
 - `api.py` — compatibility entry point for `uvicorn api:app`
 
->>>>>>> 8b9ac16 (Add chatbot API, backend and tests)
----
-
 ## ⚡ Quick Start
 
 ### 1. Setup Environment
