@@ -6,9 +6,10 @@ import re
 from typing import Any
 
 import fitz
-
 from groq import AsyncGroq
+
 from pydantic import ValidationError
+
 from config.settings import get_settings
 from services.ocr.gemini_client import METADATA_PROMPT, describe_provider_error
 from services.ocr.schemas import OCRMetadata
@@ -25,7 +26,16 @@ Rules:
 3. Preserve tables using Markdown table syntax.
 4. Preserve numbers, dates, names and identifiers exactly.
 5. Do not invent missing text; mark unreadable text as [UNREADABLE].
-6. Return only the extracted text, with no commentary."""
+6. Return only the extracted text, with no commentary.
+
+SCRIPT RULES (the document mixes Hindi in Devanagari and English):
+- Transcribe every word in the script it is written in. Hindi stays in Devanagari; English stays in English.
+- NEVER translate between languages and NEVER transliterate (do not write Hindi in Roman letters or
+  English in Devanagari).
+- Do not interpret, summarize, normalize, expand abbreviations or add words that are not on the page.
+- Copy digits exactly as printed or written, including Devanagari digits (०-९) versus Western digits
+  (0-9); never convert one numeral system into the other.
+- Keep the original line breaks where practical, and keep names, numbers and legal sections exactly."""
 
 _PDF_RENDER_ZOOM = 2.0
 _MAX_CONCURRENT_PAGES = 1
@@ -122,31 +132,17 @@ class GroqMetadataError(Exception):
     """Raised when Groq metadata extraction fails or returns unusable output."""
 
 _METADATA_TIMEOUT_SECONDS = 60.0
-
 _METADATA_JSON_SHAPE = """Return ONLY one JSON object with exactly these keys:
-{
-"document_type": string|null,
-"title": string|null,
-"fir_number": string|null,
-"fir_date": string|null,
-"case_number": string|null,
-"case_type": string|null,
-"document_date": string|null,
-"police_station": string|null,
-"district": string|null,
-"investigating_officer": string|null,
-"legal_sections": [string],
-"complainant_name": string|null,
-"accused_names": [string],
-"witness_names": [string],
-"incident_date": string|null,
-"incident_date_time": string|null,
-"incident_location": string|null,
-"document_narrative": string|null,
-"investigation_actions_findings": [string]
-}
-Use null for missing single values and [] for missing lists.
-No commentary."""
+{"document_type": string|null, "fir_number": string|null, "case_number": string|null,
+"document_date": string|null, "police_station": string|null, "district": string|null,
+"investigating_officer": string|null, "legal_sections": [string],
+"complainant_name": string|null, "accused_names": [string], "witness_names": [string],
+"incident_date_time": string|null, "incident_location": string|null,
+"document_narrative": string|null, "investigation_actions_findings": [string],
+"document_class": "FIR"|"APPLICATION"|"OTHER"|"UNCLEAR",
+"application_location": {"found": boolean, "start_page": integer|null, "end_page": integer|null,
+"start_text": string|null, "end_text": string|null}|null}
+Use null for missing single values and [] for missing lists. No commentary."""
 
 def _parse_metadata_json(text: str | None) -> dict[str, Any]:
     if not text or not text.strip():
@@ -168,7 +164,7 @@ def _parse_metadata_json(text: str | None) -> dict[str, Any]:
     return parsed
 
 async def extract_metadata(ocr_text: str) -> OCRMetadata:
-    """Extract FIR and police document metadata from existing OCR text."""
+    """Extract the 15 metadata fields from existing OCR text (text-only, single attempt)."""
     if not ocr_text or not ocr_text.strip():
         raise GroqMetadataError("No OCR text available for metadata extraction")
     settings = get_settings()

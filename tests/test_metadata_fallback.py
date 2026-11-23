@@ -2,7 +2,10 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
+from fastapi import BackgroundTasks
 
+from config.settings import get_settings
+from services.ocr import gemini_key_manager as key_manager
 from services.ocr import gemini_client, groq_client, service
 from services.ocr.gemini_client import GeminiMetadataError, GeminiOCRError
 from services.ocr.groq_client import GroqMetadataError, GroqOCRError
@@ -20,7 +23,9 @@ class Calls(dict):
 @pytest.fixture
 def env(monkeypatch):
     calls = Calls(g_ocr=0, q_ocr=0, g_meta=0, q_meta=0)
-    cfg = SimpleNamespace(gemini_model="gem", groq_model="grq", max_file_size_bytes=10**6)
+    cfg = get_settings().model_copy(update=dict(
+        gemini_model="gem", groq_model="grq", max_file_size_bytes=10**6,
+        metadata_timeout_seconds=5))
     monkeypatch.setattr(service, "get_settings", lambda: cfg)
     monkeypatch.setattr(service.utils, "sanitize_filename", lambda n: n)
     monkeypatch.setattr(service.utils, "validate_upload_metadata", lambda n, c: "pdf")
@@ -58,8 +63,16 @@ def env(monkeypatch):
 
 
 def upload():
+    """Upload, run the scheduled background task, and return the final stored record."""
     f = SimpleNamespace(filename="a.pdf", content_type="application/pdf")
-    return asyncio.run(service.process_upload(f))
+    tasks = BackgroundTasks()
+
+    async def go():
+        resp = await service.process_upload(f, tasks)
+        await tasks()
+        return service.get_ocr_result(resp.document_id)
+
+    return asyncio.run(go())
 
 
 M = OCRMetadata(fir_number="FIR 1/2026")
@@ -118,7 +131,8 @@ def test_invalid_gemini_metadata_triggers_groq(env, monkeypatch):
         return await real(t)
 
     monkeypatch.setattr(gemini_client, "extract_metadata", wrapper)
-    monkeypatch.setattr(gemini_client, "_get_client", lambda: client)
+    monkeypatch.setattr(key_manager, "_manager", key_manager.GeminiKeyManager(
+        ["AIzaSyTESTKEY000000000000000000000001"], client_factory=lambda k, p: client))
     monkeypatch.setattr(gemini_client, "get_settings", lambda: SimpleNamespace(gemini_model="gem"))
     r = upload()
     assert r.metadata_model == "grq" and c["q_meta"] == 1 and c["g_meta"] == 1

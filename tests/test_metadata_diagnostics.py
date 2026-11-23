@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from services.ocr import gemini_key_manager as key_manager
 from services.ocr import gemini_client, groq_client
 from services.ocr.gemini_client import GeminiMetadataError, describe_provider_error
 from services.ocr.groq_client import GroqMetadataError
@@ -28,7 +29,8 @@ def gemini_with(monkeypatch, text=None, exc=None, sent=None):
         return SimpleNamespace(text=text, candidates=[SimpleNamespace(finish_reason="STOP")])
 
     client = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)))
-    monkeypatch.setattr(gemini_client, "_get_client", lambda: client)
+    monkeypatch.setattr(key_manager, "_manager", key_manager.GeminiKeyManager(
+        ["AIzaSyTESTKEY000000000000000000000001"], client_factory=lambda k, p: client))
     monkeypatch.setattr(gemini_client, "get_settings", lambda: SimpleNamespace(gemini_model="gem"))
 
 

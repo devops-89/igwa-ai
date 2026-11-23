@@ -1,9 +1,11 @@
 import logging
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
+from services.ocr import gemini_key_manager
 from services.ocr.routes import router as ocr_router
 
 logging.basicConfig(
@@ -20,7 +22,6 @@ app = FastAPI(
     version="0.1.0",
 )
 
-app.include_router(ocr_router)
 
 
 @app.exception_handler(Exception)
@@ -34,6 +35,12 @@ async def root() -> dict[str, str]:
     return {"service": "IGWA OCR API", "docs": "/docs"}
 
 
-@app.get("/health", tags=["Health"], summary="Check the API is running")
-async def health() -> dict[str, str]:
-    return {"status": "healthy", "service": "IGWA OCR API"}
+@app.get("/python/ocr/health", tags=["Health"], summary="Check the API is running")
+@app.get("/health", include_in_schema=False)  # kept for load balancers / probes
+async def health() -> dict[str, Any]:
+    return {"status": "healthy", "service": "IGWA OCR API",
+            # counts only: no slot details, reasons or credentials over HTTP
+            "gemini_keys": gemini_key_manager.get_manager().counts()}
+
+# Included last so fixed paths like /python/ocr/health are matched before /python/ocr/{document_id}.
+app.include_router(ocr_router)
